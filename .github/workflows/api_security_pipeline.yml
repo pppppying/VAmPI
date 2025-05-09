@@ -37,7 +37,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Snyk dependency scan
-        uses: snyk/actions/python@master
+        uses: snyk auth/actions/python@master
         env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
