@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # --- detecting code-level vulnerabilities with SAST ---
+      # --- Detecting code-level vulnerabilities with SAST ---
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -19,16 +19,76 @@ jobs:
       - name: Install Bandit
         run: pip install bandit
 
-      -name: Run Bandit
+      - name: Run Bandit
         run: |
           bandit -r . -f json -o bandit-report.json || true
 
-      -name: Upload Bandit Report
-       uses: actions/upload-artifact@v4
-       with:
-         name: code-level-vulnerabilities-report
-         path: bandit-report.json
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+         with:
+           name: code-level-vulnerabilities-report
+           path: bandit-report.json
       # --- End of SAST stage ---
 
-      
-  
+      # --- Scan dependencies for security vulnerabilities with SCA tools ---
+      - name: Install python dependencies
+       run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Snyk dependency scan
+        uses: snyk/actions/python@master
+        env:
+         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+       with:
+         args: test --file=requirements.txt --json-file-output=snyk-report.json || true
+
+      - name: Upload Snyk Report
+        uses: actions/upload-artifact@v4
+        with:
+         name: snyk-dependency-report
+         path: snyk-report.json
+      # --- End of SCA
+
+      # --- Build Docker image ---
+      - name: Build VAmPI Docker Image
+        run: docker build -t vampi-image .
+
+      # --- Container Scan with Trivy ---
+      - name: Install Trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy
+
+      - name: Run Trivy Scan
+        run: |
+          trivy image vampi-image --format json -o trivy-report.json || true
+
+      - name: Upload Trivy Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-container-report
+          path: trivy-report.json
+
+      # --- Run Docker container for DAST scan ---
+      - name: Run VAmPI Docker Container
+        run: docker run -d --name vampi-test -p 5000:5000 vampi-image
+
+      - name: Wait for the API to boot
+        run: sleep 10
+
+      # --- DAST: Scan running API with OWASP ZAP ---
+      - name: Run OWASP ZAP Scan
+        run: |
+          docker run --network host \
+            -v ${{ github.workspace }}:/zap/wrk \
+            owasp/zap2docker-stable zap-baseline.py -t http://localhost:5000 -r zap-report.html || true
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-report
+          path: zap-report.html
