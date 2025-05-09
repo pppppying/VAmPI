@@ -25,14 +25,14 @@ jobs:
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
-         with:
+        with:
            name: code-level-vulnerabilities-report
            path: bandit-report.json
       # --- End of SAST stage ---
 
       # --- Scan dependencies for security vulnerabilities with SCA tools ---
       - name: Install python dependencies
-       run: |
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -40,7 +40,7 @@ jobs:
         uses: snyk/actions/python@master
         env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-       with:
+        with:
          args: test --file=requirements.txt --json-file-output=snyk-report.json || true
 
       - name: Upload Snyk Report
