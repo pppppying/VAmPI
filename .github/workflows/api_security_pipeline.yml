@@ -72,13 +72,15 @@ jobs:
         with:
           name: trivy-container-report
           path: trivy-report.json
+      # --- End of Container Scan ---
 
-      # --- Run Docker container for DAST scan ---
+      # --- Run VAmPI Test Instance in Docker ---
       - name: Run VAmPI Docker Container
         run: docker run -d --name vampi-test -p 5000:5000 vampi-image
 
       - name: Wait for the API to boot
         run: sleep 10
+      # --- End of DAST Scan ---
 
       # --- DAST: Scan running API with OWASP ZAP ---
       - name: Run OWASP ZAP Scan
