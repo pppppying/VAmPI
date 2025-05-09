@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      #detecting code-level vulnerabilities
+      # --- detecting code-level vulnerabilities with SAST ---
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -28,4 +28,7 @@ jobs:
        with:
          name: code-level-vulnerabilities-report
          path: bandit-report.json
+      # --- End of SAST stage ---
+
+      
   
