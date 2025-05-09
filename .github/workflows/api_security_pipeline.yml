@@ -1,1 +1,31 @@
+name: API security deployment pipeline
 
+on: [push, pull_request]
+
+jobs:
+  security_scan_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      #detecting code-level vulnerabilities
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      -name: Run Bandit
+        run: |
+          bandit -r . -f json -o bandit-report.json || true
+
+      -name: Upload Bandit Report
+       uses: actions/upload-artifact@v4
+       with:
+         name: code-level-vulnerabilities-report
+         path: bandit-report.json
+  
